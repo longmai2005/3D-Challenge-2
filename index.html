@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dream Home Designer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  </head>
+  <body>
+    <div id="start-screen">
+        <div class="start-card">
+            <h1>DREAM HOME</h1>
+            <p>DESIGN YOUR FUTURE SPACE</p>
+            <button id="start-btn">START</button>
+        </div>
+    </div>
+
+    <div id="app-ui" class="hidden">
+        
+        <div id="sidebar">
+            <div class="sidebar-header">FURNITURE LIBRARY</div>
+            <div class="scroll-area" id="catalog-list"></div>
+        </div>
+
+        <div id="properties-panel">
+            <div class="panel-title">
+                <span>PROPERTIES</span>
+                <i class="fas fa-times" id="btn-close" style="cursor:pointer; color:#bdc3c7"></i>
+            </div>
+            
+            <div style="margin-bottom:15px">
+                <label style="font-size:0.8rem; font-weight:bold; color:#95a5a6">SELECTED ITEM</label>
+                <div id="item-name-display" style="color:#2c3e50; font-weight:bold; margin-top:5px">...</div>
+            </div>
+
+            <div style="margin-bottom:15px">
+                <label style="font-size:0.8rem; font-weight:bold; color:#95a5a6">COLOR</label>
+                <input type="color" id="color-picker" style="width:100%; height:40px; border:none; margin-top:5px; cursor:pointer">
+            </div>
+
+            <div class="btn-row">
+                <button class="action-btn" id="btn-rotate"><i class="fas fa-redo"></i> ROTATE</button>
+                <button class="action-btn danger" id="btn-delete"><i class="fas fa-trash"></i> DELETE</button>
+            </div>
+        </div>
+
+        <div id="top-actions">
+            <button class="fab-btn" id="btn-save" title="Save Layout"><i class="fas fa-save"></i></button>
+            <button class="fab-btn" style="background:#e74c3c" id="btn-clear" title="Clear All"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
