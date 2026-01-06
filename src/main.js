@@ -1,18 +1,23 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// --- DATA CATALOG (Đã cập nhật theo hình ảnh thư mục của bạn) ---
+// --- CẤU HÌNH ---
+const GRID_SIZE = 0.5; // Kích thước ô lưới (0.5 mét)
+
+// --- 1. DATA CATALOG ---
 const CATALOG = {
-    "Chairs": [
+    "Ghế (Chairs)": [
         { name: "Cabin Chair", file: "/models/Cabin chair.glb", img: "https://cdn-icons-png.flaticon.com/512/1663/1663955.png" },
         { name: "Executive Chair", file: "/models/Executive Chair.glb", img: "https://cdn-icons-png.flaticon.com/512/4604/4604712.png" },
+        { name: "Office Chair", file: "/models/Office Chair.glb", img: "https://cdn-icons-png.flaticon.com/512/4604/4604646.png" },
         { name: "Desk Chair", file: "/models/Desk Chair.glb", img: "https://cdn-icons-png.flaticon.com/512/2663/2663548.png" },
         { name: "Simple Chair", file: "/models/chair.glb", img: "https://cdn-icons-png.flaticon.com/512/2432/2432682.png" },
+        { name: "Lounge Chair", file: "/models/chair2.glb", img: "https://cdn-icons-png.flaticon.com/512/2663/2663529.png" }, 
+        { name: "Modern Chair", file: "/models/Chair3.glb", img: "https://cdn-icons-png.flaticon.com/512/2663/2663529.png" }, 
     ],
-    "Tables": [
+    "Bàn (Tables)": [
         { name: "Office Desk", file: "/models/Desk.glb", img: "https://cdn-icons-png.flaticon.com/512/3115/3115166.png" },
         { name: "Standing Desk", file: "/models/Standing Desk.glb", img: "https://cdn-icons-png.flaticon.com/512/2558/2558063.png" },
         { name: "Pool Table", file: "/models/Pool Table.glb", img: "https://cdn-icons-png.flaticon.com/512/632/632534.png" },
@@ -22,12 +27,14 @@ const CATALOG = {
         { name: "Small Table", file: "/models/Small Table.glb", img: "https://cdn-icons-png.flaticon.com/512/751/751656.png" },
         { name: "Large Table", file: "/models/Table (1).glb", img: "https://cdn-icons-png.flaticon.com/512/1663/1663941.png" }
     ],
-    "Plants": [
+    "Cây Cảnh (Plants)": [
         { name: "House Plant", file: "/models/Houseplant.glb", img: "https://cdn-icons-png.flaticon.com/512/1892/1892751.png" },
         { name: "Pot Plant", file: "/models/Pot Plant.glb", img: "https://cdn-icons-png.flaticon.com/512/3079/3079174.png" },
         { name: "Alien Plant", file: "/models/Alien Plants.glb", img: "https://cdn-icons-png.flaticon.com/512/4462/4462272.png" },
         { name: "Shelf Plants", file: "/models/Plants - Assorted shelf plants.glb", img: "https://cdn-icons-png.flaticon.com/512/9027/9027961.png" },
-        { name: "Small Plant", file: "/models/plant1.glb", img: "https://cdn-icons-png.flaticon.com/512/2921/2921820.png" }
+        { name: "Small Plant", file: "/models/plant1.glb", img: "https://cdn-icons-png.flaticon.com/512/2921/2921820.png" },
+        { name: "Coffee Plant", file: "/models/Coffee plant.glb", img: "https://cdn-icons-png.flaticon.com/512/10696/10696772.png" },
+        { name: "Fiddle Leaf", file: "/models/Fiddle-leaf Plant.glb", img: "https://cdn-icons-png.flaticon.com/512/628/628283.png" }
     ]
 };
 
@@ -53,6 +60,11 @@ floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
 scene.add(floor);
 
+// *** THÊM GRID HELPER (LƯỚI) ***
+// GridHelper(kích thước, số ô chia) -> 10 mét, chia thành 20 ô (mỗi ô 0.5m)
+const gridHelper = new THREE.GridHelper(10, 20, 0x888888, 0xcccccc);
+scene.add(gridHelper);
+
 // Tường
 const wallTex = textureLoader.load('/textures/wall.jpg', (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1); });
 const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, color: 0xffffff });
@@ -77,14 +89,13 @@ const furnitureArr = [];
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
 
-// Khung xanh bao quanh vật thể
+// Khung xanh
 const selectionBox = new THREE.BoxHelper();
-selectionBox.material.color.set(0x3498db); // Màu xanh dương
+selectionBox.material.color.set(0x3498db);
 selectionBox.visible = false;
 scene.add(selectionBox);
 
-// --- 5. HỆ THỐNG KÉO THẢ TRỰC TIẾP (DRAG LOGIC) ---
-// Tạo một mặt phẳng ảo vô hình (trùng với sàn nhà) để tính toán vị trí kéo
+// --- 5. HỆ THỐNG KÉO THẢ (CÓ SNAP TO GRID) ---
 const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -94,9 +105,8 @@ const dragOffset = new THREE.Vector3();
 let isDragging = false;
 let currentObject = null;
 
-// SỰ KIỆN 1: BẤM CHUỘT XUỐNG
+// CLICK
 renderer.domElement.addEventListener('pointerdown', (event) => {
-    // Nếu bấm vào UI thì bỏ qua
     if (event.target.closest('#sidebar') || event.target.closest('#properties-panel') || event.target.closest('#top-actions')) return;
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -106,29 +116,24 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     const intersects = raycaster.intersectObjects(furnitureArr, true);
 
     if (intersects.length > 0) {
-        // Tìm vật thể cha (Group)
         let selected = intersects[0].object;
         while(selected.parent && selected.parent.type !== 'Scene') selected = selected.parent;
 
-        // BẮT ĐẦU KÉO
         isDragging = true;
         currentObject = selected;
-        orbit.enabled = false; // Tắt xoay camera để kéo vật
+        orbit.enabled = false;
 
-        // Tính điểm lệch để kéo mượt hơn (không bị giật về tâm chuột)
+        // Tính offset để kéo không bị giật
         if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
             dragOffset.copy(intersectPoint).sub(currentObject.position);
         }
-
-        // Chọn vật thể (Hiện khung xanh + UI)
         selectItem(currentObject);
     } else {
-        // Bấm ra ngoài -> Bỏ chọn
         deselectItem();
     }
 });
 
-// SỰ KIỆN 2: DI CHUYỂN CHUỘT
+// DRAG (CÓ TÍNH NĂNG SNAP TO GRID)
 renderer.domElement.addEventListener('pointermove', (event) => {
     if (!isDragging || !currentObject) return;
 
@@ -137,24 +142,27 @@ renderer.domElement.addEventListener('pointermove', (event) => {
 
     raycaster.setFromCamera(mouse, camera);
 
-    // Tính toán vị trí mới trên sàn
     if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
-        // Di chuyển vật thể theo chuột (trừ đi độ lệch ban đầu)
-        currentObject.position.x = intersectPoint.x - dragOffset.x;
-        currentObject.position.z = intersectPoint.z - dragOffset.z;
+        // Tính toán vị trí thô
+        let rawX = intersectPoint.x - dragOffset.x;
+        let rawZ = intersectPoint.z - dragOffset.z;
+
+        // >>> LOGIC SNAP TO GRID <<<
+        // Làm tròn số tới bội số gần nhất của GRID_SIZE
+        currentObject.position.x = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
+        currentObject.position.z = Math.round(rawZ / GRID_SIZE) * GRID_SIZE;
         
-        // Cập nhật khung xanh đi theo
         selectionBox.update();
     }
 });
 
-// SỰ KIỆN 3: NHẢ CHUỘT
+// RELEASE
 renderer.domElement.addEventListener('pointerup', () => {
     isDragging = false;
-    orbit.enabled = true; // Bật lại xoay camera
+    orbit.enabled = true;
 });
 
-// --- 6. LOAD MODEL (Fix NaN) ---
+// --- 6. LOAD MODEL ---
 const loader = new GLTFLoader();
 
 function spawnFurniture(path, name) {
@@ -162,9 +170,7 @@ function spawnFurniture(path, name) {
         const model = gltf.scene;
         model.traverse(c => { if(c.isMesh) { c.castShadow=true; c.receiveShadow=true; }});
         
-        model.position.set(0, 0, 0); // Reset vị trí
-
-        // Tính toán để đặt chạm đất
+        model.position.set(0, 0, 0); 
         const box = new THREE.Box3().setFromObject(model);
         if (isFinite(box.min.y)) {
             model.position.y -= box.min.y;
@@ -178,8 +184,8 @@ function spawnFurniture(path, name) {
         selectItem(model);
 
     }, undefined, (err) => {
-        console.error("Lỗi load:", err);
-        alert(`Không tìm thấy file: ${path}`);
+        console.error("Lỗi:", err);
+        alert(`Lỗi file: ${path}`);
     });
 }
 
@@ -187,7 +193,6 @@ function spawnFurniture(path, name) {
 function selectItem(obj) {
     selectionBox.setFromObject(obj);
     selectionBox.visible = true;
-    
     document.getElementById('properties-panel').classList.add('active');
     document.getElementById('item-name-display').innerText = obj.userData.name || "Item";
 }
