@@ -3,21 +3,35 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// --- CẤU HÌNH ---
-const GRID_SIZE = 0.5; // Kích thước ô lưới (0.5 mét)
+const AUDIO = {
+    spawn: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),   
+    select: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'),  
+    rotate: new Audio('https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3'),  
+    delete: new Audio('https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3'),  
+    save: new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'),    
+    drag: new Audio('https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3')     
+};
+
+// Hàm phát âm thanh chung (có reset để bấm liên tục được)
+function playSound(name) {
+    if (AUDIO[name]) {
+        AUDIO[name].currentTime = 0; 
+        AUDIO[name].volume = 0.5;    
+        AUDIO[name].play().catch(e => console.warn("Chưa tương tác với web nên chưa phát tiếng"));
+    }
+}
 
 // --- 1. DATA CATALOG ---
 const CATALOG = {
-    "Ghế (Chairs)": [
+    "Chairs": [
         { name: "Cabin Chair", file: "/models/Cabin chair.glb", img: "https://cdn-icons-png.flaticon.com/512/1663/1663955.png" },
         { name: "Executive Chair", file: "/models/Executive Chair.glb", img: "https://cdn-icons-png.flaticon.com/512/4604/4604712.png" },
-        { name: "Office Chair", file: "/models/Office Chair.glb", img: "https://cdn-icons-png.flaticon.com/512/4604/4604646.png" },
         { name: "Desk Chair", file: "/models/Desk Chair.glb", img: "https://cdn-icons-png.flaticon.com/512/2663/2663548.png" },
         { name: "Simple Chair", file: "/models/chair.glb", img: "https://cdn-icons-png.flaticon.com/512/2432/2432682.png" },
         { name: "Lounge Chair", file: "/models/chair2.glb", img: "https://cdn-icons-png.flaticon.com/512/2663/2663529.png" }, 
         { name: "Modern Chair", file: "/models/Chair3.glb", img: "https://cdn-icons-png.flaticon.com/512/2663/2663529.png" }, 
     ],
-    "Bàn (Tables)": [
+    "Tables": [
         { name: "Office Desk", file: "/models/Desk.glb", img: "https://cdn-icons-png.flaticon.com/512/3115/3115166.png" },
         { name: "Standing Desk", file: "/models/Standing Desk.glb", img: "https://cdn-icons-png.flaticon.com/512/2558/2558063.png" },
         { name: "Pool Table", file: "/models/Pool Table.glb", img: "https://cdn-icons-png.flaticon.com/512/632/632534.png" },
@@ -27,7 +41,7 @@ const CATALOG = {
         { name: "Small Table", file: "/models/Small Table.glb", img: "https://cdn-icons-png.flaticon.com/512/751/751656.png" },
         { name: "Large Table", file: "/models/Table (1).glb", img: "https://cdn-icons-png.flaticon.com/512/1663/1663941.png" }
     ],
-    "Cây Cảnh (Plants)": [
+    "Plants": [
         { name: "House Plant", file: "/models/Houseplant.glb", img: "https://cdn-icons-png.flaticon.com/512/1892/1892751.png" },
         { name: "Pot Plant", file: "/models/Pot Plant.glb", img: "https://cdn-icons-png.flaticon.com/512/3079/3079174.png" },
         { name: "Alien Plant", file: "/models/Alien Plants.glb", img: "https://cdn-icons-png.flaticon.com/512/4462/4462272.png" },
@@ -60,8 +74,7 @@ floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-// *** THÊM GRID HELPER (LƯỚI) ***
-// GridHelper(kích thước, số ô chia) -> 10 mét, chia thành 20 ô (mỗi ô 0.5m)
+// Grid Helper (Lưới sàn)
 const gridHelper = new THREE.GridHelper(10, 20, 0x888888, 0xcccccc);
 scene.add(gridHelper);
 
@@ -89,13 +102,12 @@ const furnitureArr = [];
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
 
-// Khung xanh
 const selectionBox = new THREE.BoxHelper();
 selectionBox.material.color.set(0x3498db);
 selectionBox.visible = false;
 scene.add(selectionBox);
 
-// --- 5. HỆ THỐNG KÉO THẢ (CÓ SNAP TO GRID) ---
+// --- 5. KÉO THẢ (DRAG & DROP) + SNAP TO GRID ---
 const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -104,8 +116,9 @@ const dragOffset = new THREE.Vector3();
 
 let isDragging = false;
 let currentObject = null;
+const GRID_SIZE = 0.5;
 
-// CLICK
+// CLICK (Pointer Down)
 renderer.domElement.addEventListener('pointerdown', (event) => {
     if (event.target.closest('#sidebar') || event.target.closest('#properties-panel') || event.target.closest('#top-actions')) return;
 
@@ -123,7 +136,8 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
         currentObject = selected;
         orbit.enabled = false;
 
-        // Tính offset để kéo không bị giật
+        playSound('select');
+
         if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
             dragOffset.copy(intersectPoint).sub(currentObject.position);
         }
@@ -133,7 +147,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     }
 });
 
-// DRAG (CÓ TÍNH NĂNG SNAP TO GRID)
+// MOVE (Pointer Move)
 renderer.domElement.addEventListener('pointermove', (event) => {
     if (!isDragging || !currentObject) return;
 
@@ -143,20 +157,21 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     raycaster.setFromCamera(mouse, camera);
 
     if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
-        // Tính toán vị trí thô
         let rawX = intersectPoint.x - dragOffset.x;
         let rawZ = intersectPoint.z - dragOffset.z;
 
-        // >>> LOGIC SNAP TO GRID <<<
-        // Làm tròn số tới bội số gần nhất của GRID_SIZE
-        currentObject.position.x = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
-        currentObject.position.z = Math.round(rawZ / GRID_SIZE) * GRID_SIZE;
-        
-        selectionBox.update();
+        const newX = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
+        const newZ = Math.round(rawZ / GRID_SIZE) * GRID_SIZE;
+
+        if(currentObject.position.x !== newX || currentObject.position.z !== newZ) {
+            currentObject.position.x = newX;
+            currentObject.position.z = newZ;
+            selectionBox.update();
+        }
     }
 });
 
-// RELEASE
+// RELEASE (Pointer Up)
 renderer.domElement.addEventListener('pointerup', () => {
     isDragging = false;
     orbit.enabled = true;
@@ -181,6 +196,9 @@ function spawnFurniture(path, name) {
         model.userData.name = name;
         scene.add(model);
         furnitureArr.push(model);
+        
+        playSound('spawn');
+        
         selectItem(model);
 
     }, undefined, (err) => {
@@ -231,6 +249,7 @@ const startBtn = document.getElementById('start-btn');
 if(startBtn) startBtn.addEventListener('click', () => {
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('app-ui').classList.remove('hidden');
+    playSound('select');
 });
 
 const closeBtn = document.getElementById('btn-close');
@@ -238,7 +257,11 @@ if(closeBtn) closeBtn.onclick = deselectItem;
 
 const rotateBtn = document.getElementById('btn-rotate');
 if(rotateBtn) rotateBtn.onclick = () => { 
-    if(currentObject) { currentObject.rotation.y += Math.PI/2; selectionBox.update(); }
+    if(currentObject) { 
+        currentObject.rotation.y += Math.PI/2; 
+        selectionBox.update(); 
+        playSound('rotate'); // Âm thanh xoay
+    }
 };
 
 const deleteBtn = document.getElementById('btn-delete');
@@ -247,6 +270,7 @@ if(deleteBtn) deleteBtn.onclick = () => {
         selectionBox.visible = false;
         scene.remove(currentObject);
         furnitureArr.splice(furnitureArr.indexOf(currentObject), 1);
+        playSound('delete'); // Âm thanh xóa
         deselectItem();
     }
 };
@@ -261,11 +285,15 @@ if(clearBtn) clearBtn.addEventListener('click', () => {
     if(confirm('Xóa hết?')) {
         furnitureArr.forEach(o => scene.remove(o));
         furnitureArr.length = 0;
+        playSound('delete');
         deselectItem();
     }
 });
 const saveBtn = document.getElementById('btn-save');
-if(saveBtn) saveBtn.addEventListener('click', () => alert('Đã lưu!'));
+if(saveBtn) saveBtn.addEventListener('click', () => {
+    playSound('save'); // Âm thanh lưu
+    alert('Đã lưu!');
+});
 
 // --- LOOP ---
 function animate() {
