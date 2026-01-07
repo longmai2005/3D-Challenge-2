@@ -7,14 +7,11 @@ Built with **Three.js** and **Vite**.
 ### ✨ Features
 
 ### 1. 3D Environment 
-```
 * **Realistic Scene:** A complete room setup with textured flooring and walls.
 * **Lighting:** Combination of Ambient and Directional lighting for realistic shadows and depth.
 * **Camera Controls:** Fully interactive camera (OrbitControls) allowing users to zoom, pan, and rotate around the room.
-```
 
 ### 2. Interaction & Customization (R2)
-```
 * **Direct Drag & Drop:** Intuitive interaction system. Click and drag any furniture item to move it across the floor.
 * **Grid Snapping (Bonus):** Furniture automatically snaps to a **0.5m grid**, ensuring perfect alignment and layout precision.
 * **Asset Library:** A categorized sidebar containing various 3D models:
@@ -25,28 +22,26 @@ Built with **Three.js** and **Vite**.
     * **Rotate:** Rotate objects by 90 degrees.
     * **Color:** Change the material color of furniture dynamically.
     * **Delete:** Remove objects from the scene.
-```
 
 ### 3. Application Logic (R3)
-```
+
 * **Smart Selection:** Logic to differentiate between "Clicking to Select" and "Dragging to Move/Rotate Camera".
 * **Visual Feedback:** Selected items are highlighted with a blue bounding box.
 * **Asset Management:** System to load GLB/GLTF models asynchronously with error handling (Auto-fix for NaN position errors).
-```
 ---
 
 ## 🛠️ Technology Stack
-```
+
 * **Core:** JavaScript (ES6+)
 * **3D Engine:** [Three.js](https://threejs.org/)
 * **Build Tool:** [Vite](https://vitejs.dev/)
 * **Styling:** CSS3 (Custom UI, no external CSS framework)
 * **3D Format:** GLB / GLTF
-```
+
 ---
 
 ## 🚀 Installation & Setup
-```
+
 
 Follow these steps to run the project locally:
 
@@ -69,10 +64,10 @@ Follow these steps to run the project locally:
 
 4.  **Open in Browser:**
     Open the link shown in the terminal (usually `http://localhost:5173`).
-```
+
 
 ## 🎮 Controls & User Guide
-```
+
 | Action | Control |
 | :--- | :--- |
 | **Select Item** | Left Click on an object |
@@ -84,7 +79,6 @@ Follow these steps to run the project locally:
 | **Change Color** | Use the Color Picker in the right panel |
 | **Delete Object** | Click "DELETE" button or Trash icon |
 
-```
 ## 📂 Project Structure
 ```
 dream-home-3d/
